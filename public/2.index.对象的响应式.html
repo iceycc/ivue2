@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+<!--
+    1. 对数据进行来拦截 对象 数组 （依赖收集）
+    2. templete模版 -》 ast语法树（描述语法的） -》 render函数 -》 虚拟dom
+    3. new Vue时会产生一个watcher（渲染watcher） vm._update(vm._render())
+
+-->
+<div id="app" a="1" b="2" style="background-color:red">
+    <ul style="color:green;font-size: 30px">
+        <li>
+            name: {{name}}
+        </li>
+        <li>
+            age: {{age}}
+        </li>
+        <li>
+            {{arr}}
+        </li>
+    </ul>
+</div>
+<script src="/dist/vue.js"></script>
+<script>
+    // vue2 options API 无法tree-shaking
+    let vm = new Vue({
+        el: '#app',
+        data() {
+            // 响应式，数据代理，数据劫持。Object.defineProperty
+            return {
+                name: 'wby',
+                age: 12,
+                address: '海淀',
+            }
+        },
+        props: [],
+        methods: {},
+        computed: {},
+        watch: {}
+    })
+    setTimeout(() => {
+        // 多次更新重复触发,加防抖
+        vm.name = '1'
+        vm.name = '2'
+        vm.name = '3'
+        vm.name = '4'
+        // vue的异步更新原理，就是通过nextTick异步执行更新视图逻辑
+        console.log(vm.$el.innerHTML)// 还是最初的，因为内部更新是异步，现在还没更新完毕
+        // setTimeout(() =>{ // 加定时器是可以的，但是性能低
+        //     console.log(vm.$options.el.innerHTML)
+        // },0)
+        // 用内部的nextTick代替
+        vm.$nextTick(() => {
+            console.log(vm.$el.innerHTML)
+        })
+
+        // vm.name = '哈哈哈2'
+        // vm._update(vm._render()) // 强制更新
+    }, 1000)
+    // vm.address = '哈哈哈3'
+
+</script>
+</body>
+</html>

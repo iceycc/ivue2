@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+<!--
+   AST针对源码的，任何语言都可以转ast；虚拟dom只是针对dom的
+  html->js: 模板编译原理 AST语法树 （树的遍历）  先标识出html来 -》 js语法
+
+   1.需要将模板变成一个render方法 :
+         <li v-for="i in 3">{{name}}</li>
+         render(){return _l(3,_c('li',{},name)) }
+   2.需要去当前的实例上取值  with(this)
+   3.虚拟dom =》 对象 可以描述dom结构（diff算法）
+   4.要生成一个真实的dom结构扔到页面中
+-->
+<div id="app" a="1" b="2" style="background-color:red">
+    <ul style="color:green;font-size: 30px">
+        <li>
+            name: {{name}}
+        </li>
+        <li>
+            age: {{age}}
+        </li>
+    </ul>
+</div>
+<script src="/dist/vue.js"></script>
+<script>
+    // vue2 options API 无法tree-shaking
+    let vm = new Vue({
+        el: '#app',
+        data() {
+            // 响应式，数据代理，数据劫持。Object.defineProperty
+            return {
+                name: 'wby',
+                age: 12
+                // 数组的问题：为什么不能用
+            }
+        },
+        props: [],
+        methods: {},
+        computed: {},
+        watch: {}
+    })
+    // vm.obj = {name: 1, age: 2} // 覆盖了对象,需要重新劫持
+    // vm.arr[0].name = 1
+    // vm.arr.push({a: 1})
+    // vm.arr[3].a = 5
+    // console.log(vm)
+
+</script>
+</body>
+</html>

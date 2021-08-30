@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+<div id="app" a="1" b="2" style="background-color:red">
+    <ul style="color:green;font-size: 30px">
+        <li>
+            {{arr1}}
+        </li>
+        <li>
+            {{arr2}}
+        </li>
+    </ul>
+</div>
+<script src="/dist/vue.js"></script>
+<script>
+    let vm = new Vue({
+        el: '#app',
+        data() {
+            return {
+                // 内部会给arr这个属性增加依赖，但是我们更改数组时不会去通知更新
+                arr1: [1, 2, 3],
+                arr2: [{name: 1}, [2], 3] // 对象会进行JSON.stringify
+            }
+        },
+        props: [],
+        methods: {},
+        computed: {},
+        watch: {}
+    })
+    setTimeout(() => {
+        vm.arr1.push(22)
+    }, 500)
+    setTimeout(() => {
+        vm.arr1.push(33)
+        vm.arr2[0].name = '哈哈哈12' //
+    }, 1500)
+    setTimeout(() => {
+        // 多维数组
+        vm.arr2[1].push(3333)
+    }, 2500)
+</script>
+</body>
+</html>

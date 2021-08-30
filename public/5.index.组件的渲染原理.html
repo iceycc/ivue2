@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+<div id="app" a="1" b="2" style="background-color:red">
+    <my-button></my-button>
+    <my-button></my-button>
+    <my-button></my-button>
+</div>
+<script src="/dist/vue.js"></script>
+<script>
+    // Vue.component -> Vue.extend -> 返回一个类，通过类去创建一个组件使用
+    Vue.component('my-button', {
+        a:1,
+        b:2,
+        template: '<button>按钮1</button>'
+    })
+    // let sub = Vue.extend({
+    //     template:'<button>按钮1</button>'
+    // })
+    // sub.component('aa',{
+    //     template:'<a>按钮1</a>'
+    // })
+    let vm = new Vue({
+        el: '#app',
+        components: { // 内部component也会有合并
+            'my-button': {
+                name: 'my-button2',
+                c:3,
+                template: '<button>按钮2</button>'
+            }
+        }
+    })
+</script>
+</body>
+</html>

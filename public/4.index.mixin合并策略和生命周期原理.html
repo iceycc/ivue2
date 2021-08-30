@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+<div id="app" a="1" b="2" style="background-color:red">
+    <ul style="color:green;font-size: 30px">
+    </ul>
+</div>
+<script src="/dist/vue.js"></script>
+<script>
+    // mergeOptions的合并原理
+    Vue.mixin({ // vue2 混入
+        beforeCreate(){
+            // 组件创建前
+            console.log('beforeCreate 1')
+        },
+        created(){
+            // 数据已经被劫持
+            console.log('created 1')
+        },
+    })
+    Vue.mixin({ // vue2 混入
+        beforeCreate(){
+            // 组件创建前
+            console.log('beforeCreate 2')
+        },
+        created(){
+            // 数据已经被劫持
+            console.log('created 2')
+        },
+    })
+    let vm = new Vue({
+        el: '#app',
+        beforeCreate(){
+            // 组件创建前
+            console.log('beforeCreate', this)
+        },
+        created(){
+            // 数据已经被劫持
+            console.log('created', this)
+        },
+    })
+</script>
+</body>
+</html>
