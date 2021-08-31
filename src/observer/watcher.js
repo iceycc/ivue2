@@ -28,7 +28,9 @@ export class Watcher {
         this.user = options.user
         this.deps = [] //  如果是相同页面多个标签取get一个属性，会触发多次.
         this.depsId = new Set() // dep去重
-        this.value = this.get() // 保存老值
+        this.lazy = options.lazy
+        this.dirty = this.lazy
+        this.value = this.lazy ? undefined : this.get() // 保存老值
         // this.exprOrFn() // 调用传人的函数。调用了render方法，此时会对模版中的数据进行取值
     }
 
@@ -50,10 +52,17 @@ export class Watcher {
         }
     }
 
+    evaluate() {
+        this.value = this.get()
+        this.dirty = false
+    }
+
     update() {
-        if(this.sync){
+        if (this.sync) {
             this.run()
-        }else{
+        } else if (this.lazy) {
+            this.dirty = true
+        } else {
             // this.get() // 数据一变重新渲染，同一个事件环中多次更新会触发多次
             queueWatcher(this); // 批处理，调度更新几次，
 
@@ -62,7 +71,6 @@ export class Watcher {
 
     run() {
         // this.get();
-
         let oldValue = this.value;
         let newValue = this.get();
         this.value = newValue

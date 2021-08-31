@@ -650,7 +650,9 @@
 
       this.depsId = new Set(); // dep去重
 
-      this.value = this.get(); // 保存老值
+      this.lazy = options.lazy;
+      this.dirty = this.lazy;
+      this.value = this.lazy ? undefined : this.get(); // 保存老值
       // this.exprOrFn() // 调用传人的函数。调用了render方法，此时会对模版中的数据进行取值
     }
 
@@ -681,10 +683,18 @@
         }
       }
     }, {
+      key: "evaluate",
+      value: function evaluate() {
+        this.value = this.get();
+        this.dirty = false;
+      }
+    }, {
       key: "update",
       value: function update() {
         if (this.sync) {
           this.run();
+        } else if (this.lazy) {
+          this.dirty = true;
         } else {
           // this.get() // 数据一变重新渲染，同一个事件环中多次更新会触发多次
           queueWatcher(this); // 批处理，调度更新几次，
@@ -727,7 +737,9 @@
       initWatch(vm, opts.watch);
     }
 
-    if (opts.computed) ;
+    if (opts.computed) {
+      initComputed(vm, opts.computed);
+    }
   }
 
   function proxy(vm, source, key) {
@@ -755,6 +767,61 @@
 
 
     observer(data);
+  }
+
+  function initComputed(vm, computed) {
+    // 内部也是通过watcher实现的
+    // 存放所有计算属性对应的watcher
+    var watchers = vm._computedWatchers = {};
+
+    for (var key in computed) {
+      var userDef = computed[key]; // 获取用户定义的函数
+
+      var getter = typeof userDef === 'function' ? userDef : userDef.get; // 获取用户getter方法
+      // 计算属性的Watcher不会立刻执行
+      // lazy为true，内部不会立刻调用getter
+
+      watchers[key] = new Watcher(vm, getter, function () {}, {
+        lazy: true
+      }); // 计算属性可以直接通过vm来进行取值
+
+      defineComputed(vm, key, userDef);
+    }
+  }
+
+  var sharedPropertyDefinition = {
+    enumerable: true,
+    configurable: true,
+    get: function get() {},
+    set: function set() {}
+  }; // 将属性定义到vm上
+
+  function defineComputed(target, key, userDef) {
+    if (typeof userDef === 'function') {
+      sharedPropertyDefinition.get = createComputedGetter(key);
+    } else {
+      sharedPropertyDefinition.get = createComputedGetter(key).get;
+
+      sharedPropertyDefinition.set = userDef.set || function () {};
+    }
+
+    Object.defineProperty(target, key, sharedPropertyDefinition);
+  }
+
+  function createComputedGetter(key) {
+    // 增加缓存
+    return function () {
+      // 添加来缓存 通过watcher来添加到
+      // console.log(this) // vm实例
+      var watcher = this._computedWatchers[key];
+
+      if (watcher !== null && watcher !== void 0 && watcher.dirty) {
+        // 默认第一次取值,如果dirty为true，就调用用户到方法
+        watcher.evaluate(); // 执行取值
+      }
+
+      return watcher.value;
+    };
   }
 
   function initMethods(vm, methods) {

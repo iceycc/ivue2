@@ -18,7 +18,7 @@ export function initState(vm) {
         initWatch(vm, opts.watch)
     }
     if (opts.computed) {
-        initComputed(vm)
+        initComputed(vm, opts.computed)
     }
 }
 
@@ -48,7 +48,55 @@ function initData(vm) {
     observer(data)
 }
 
-function initComputed(vm) {
+function initComputed(vm, computed) {
+    // 内部也是通过watcher实现的
+    // 存放所有计算属性对应的watcher
+    const watchers = vm._computedWatchers = {};
+    for (let key in computed) {
+        const userDef = computed[key] // 获取用户定义的函数
+        const getter = typeof userDef === 'function' ? userDef : userDef.get
+        // 获取用户getter方法
+        // 计算属性的Watcher不会立刻执行
+        // lazy为true，内部不会立刻调用getter
+        watchers[key] = new Watcher(vm, getter, () => {
+        }, {lazy: true})
+
+        // 计算属性可以直接通过vm来进行取值
+        defineComputed(vm, key, userDef);
+    }
+}
+
+const sharedPropertyDefinition = {
+    enumerable: true,
+    configurable: true,
+    get: () => {
+    },
+    set: () => {
+    }
+}
+
+// 将属性定义到vm上
+function defineComputed(target, key, userDef) {
+    if (typeof userDef === 'function') {
+        sharedPropertyDefinition.get = createComputedGetter(key)
+    } else {
+        sharedPropertyDefinition.get = createComputedGetter(key).get;
+        sharedPropertyDefinition.set = userDef.set || (() => {
+        })
+    }
+    Object.defineProperty(target, key, sharedPropertyDefinition)
+}
+
+function createComputedGetter(key) {
+    // 增加缓存
+    return function(){ // 添加来缓存 通过watcher来添加到
+        // console.log(this) // vm实例
+        let watcher = this._computedWatchers[key]
+        if (watcher?.dirty) { // 默认第一次取值,如果dirty为true，就调用用户到方法
+            watcher.evaluate(); // 执行取值
+        }
+        return watcher.value;
+    }
 }
 
 function initMethods(vm, methods) {

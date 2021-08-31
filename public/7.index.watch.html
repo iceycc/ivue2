@@ -24,6 +24,9 @@
         <li>
             name: {{ name }}
         </li>
+        <li>
+            age: {{ age }}
+        </li>
     </ul>
 </div>
 <!--<script src="/node_modules/vue/dist/vue.js"></script>-->
@@ -34,47 +37,49 @@
         data() {
             return {
                 name: 'wby',
-                age1: 10,
-                age2: 11
+                age: 12,
+                age1: 13,
+                age2: 14
             }
         },
-        // watch: {
-        //     age() { // 相当于取值了
-        //         console.log('age    watch')
-        //     },
-        //     age2() {
-        //         console.log('age2   watch')
-        //     }
-        // },
-        computed: {
-            // watch在内部会对变量取值，computed不会
-            // computed依赖对值不变，就不会重新执行
-            // computed变量可以用于模版的渲染
-
-            // 原理也是通过watcher实现的
-            age() {
-                // 不取值不会触发的
-                console.log('computed age')
-                return this.age1 + this.age2
-            },
-            // age3:{
-            //     get(){
-            //
-            //     },
-            //     set(){
-            //
-            //     }
-            // }
+        methods:{
+            ageChange(newVal, oldVal){
+                console.log(newVal, oldVal);
+            }
         },
+        computed: {},
+        watch: {
+            // 1.如果监控的是key，对应的值是对象，无法获取老状态
+            // 2.可以传对象，
+            // 3 watch可以注册多个监控器
+            // 4 可以写成handler格式，监听method中的方法和参数传递
+            name: {
+                handler(newVal, oldVal) {
+                    console.log(newVal, oldVal);
+                }
+            },
+            age: [
+                {
+                    handler(newVal, oldVal) {
+                        console.log(1, newVal, oldVal);
+                    },
+                    sync: true
+                }, {
+                    handler(newVal, oldVal) {
+                        console.log(2, newVal, oldVal);
+                    },
+                    sync: true
+                }
+            ],
+            age1:{
+                handler:'ageChange'
+            },
+            age2(newVal, oldVal) {
+
+            }
+        }
     })
-    // setTimeout(() => {
-    //     vm.age1 = 20
-    //     vm.age2 = 20
-    // }, 1000)
-    setTimeout(()=>{
-        console.log(vm.age);
-        console.log(vm.age)
-    },1000)
+    vm.age = 16
 </script>
 </body>
 </html>

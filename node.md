@@ -81,6 +81,12 @@ snabbdom.js
         - compileToFunction
         - mountComponent = new Watcher()
         
+        
+## watch
+
+## computed
+- 缓存
+- 不会立刻执行
 
 
 
