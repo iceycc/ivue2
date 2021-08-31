@@ -22,13 +22,14 @@
 <div id="app" a="1" b="2" style="background-color:red">
     <ul style="color:green;font-size: 30px">
         <li>
-            name: {{name}}
+            name: {{ name }}
         </li>
         <li>
-            age: {{age}}
+            age: {{ age }}
         </li>
     </ul>
 </div>
+<!--<script src="/node_modules/vue/dist/vue.js"></script>-->
 <script src="/dist/vue.js"></script>
 <script>
     let vm = new Vue({
@@ -36,13 +37,49 @@
         data() {
             return {
                 name: 'wby',
-                age: 12
+                age: 12,
+                age1: 13,
+                age2: 14
             }
         },
+        methods:{
+            ageChange(newVal, oldVal){
+                console.log(newVal, oldVal);
+            }
+        },
+        computed: {},
+        watch: {
+            // 1.如果监控的是key，对应的值是对象，无法获取老状态
+            // 2.可以传对象，
+            // 3 watch可以注册多个监控器
+            // 4 可以写成handler格式，监听method中的方法和参数传递
+            name: {
+                handler(newVal, oldVal) {
+                    console.log(newVal, oldVal);
+                }
+            },
+            age: [
+                {
+                    handler(newVal, oldVal) {
+                        console.log(1, newVal, oldVal);
+                    },
+                    sync: true
+                }, {
+                    handler(newVal, oldVal) {
+                        console.log(2, newVal, oldVal);
+                    },
+                    sync: true
+                }
+            ],
+            age1:{
+                handler:'ageChange'
+            },
+            age2(newVal, oldVal) {
+
+            }
+        }
     })
-    setTimeout(() => {
-        vm.name = '哈哈哈'
-    }, 1000)
+    vm.age = 16
 </script>
 </body>
 </html>

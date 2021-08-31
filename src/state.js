@@ -1,14 +1,23 @@
 import observer from "./observer/index";
+import {isFunction, isObject} from "./utils";
 
 export function initState(vm) {
     // 将所有的数据定义在vm属性上，并且后序修改，需要触发视图更新
     const opts = vm.$options;
     if (opts.props) {
+        initProps(vm)
     }
     if (opts.methods) {
+        initMethods(vm, opts.methods)
     }
-    if (opts.data) { // 数据初始化
+    if (opts.data) {
         initData(vm)
+    }
+    if (opts.watch) {
+        initWatch(vm, opts.watch)
+    }
+    if (opts.computed) {
+        initComputed(vm)
     }
 }
 
@@ -36,4 +45,45 @@ function initData(vm) {
     }
     // 观测这个数据
     observer(data)
+}
+
+function initComputed(vm) {
+}
+
+function initMethods(vm, methods) {
+    for (let key in methods) {
+        proxy(vm, methods[key], key)
+    }
+}
+
+function initProps(vm) {
+}
+
+function initWatch(vm, watch) {
+    // watch是个对象
+    // watch原理是Watcher
+    for (let key in watch) {
+        const handlers = watch[key];
+        // handlers可能是数组 对象 方法
+        if (Array.isArray(handlers)) {//
+            for (let handler of handlers) {
+                createWatcher(vm, key, handler)
+            }
+        } else {
+            // 单独的key value
+            createWatcher(vm, key, handlers)
+        }
+    }
+}
+
+function createWatcher(vm, key, handler, options) {
+    if (isObject(handler)) {
+        options = handler
+        handler = handler.handler;
+    } else if (typeof handler === 'string') {
+        handler = vm[handler]
+    }
+    // 参数的格式化 扁平化
+
+    console.log(key, handler, options)
 }

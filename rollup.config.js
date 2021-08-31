@@ -2,8 +2,8 @@ import serve from 'rollup-plugin-serve';
 import babel from '@rollup/plugin-babel';
 
 export default { // 用于打包的配置
-    // input:'./src/index.js',
-    input:'./src/diff.demo.js',
+    input:'./src/index.js',
+    // input:'./src/diff.demo.js',
     output:{
         file:'dist/vue.js',
         name:'Vue', // 全局的名字就是vue

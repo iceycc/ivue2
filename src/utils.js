@@ -113,3 +113,5 @@ export const isReservedTag = makeUp('a,p,div,ul,li,span,input,button')
 export function isSameVnode(oldVnode, newVnode) {
     return (oldVnode.tag === newVnode.tag && oldVnode.key === newVnode.key)
 }
+
+export const isFunction = (val) => Object.prototype.toString.call(val) === '[object Function]'

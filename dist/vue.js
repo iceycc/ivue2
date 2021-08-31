@@ -272,7 +272,7 @@
       key: "depend",
       value: function depend() {
         // 让watcher记住这个dep
-        Dep.target.addDep(this); // 让watcher记住dep
+        Dep.target.addDep(this); // Dep.target = watcher, 让watcher记住dep
       }
     }, {
       key: "addSub",
@@ -417,13 +417,143 @@
   }
   function observer(data) {
     // 只能对对象类型进行观测，非对象类型无法进行观测
-    if (_typeof(data) !== 'object' || data === null) return; // 通过类来实现对数据对观测，类可以方便扩展，会产生实例
+    if (_typeof(data) !== 'object' || data === null) return;
 
     if (data.__ob__) {
       return;
-    }
+    } // 通过类来实现对数据对观测，类可以方便扩展，会产生实例
+
 
     return new Observer(data);
+  }
+
+  var callbacks = [];
+  var waiting = false;
+
+  function flushCallbacks() {
+    var _iterator = _createForOfIteratorHelper(callbacks),
+        _step;
+
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var cb = _step.value;
+        cb();
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+
+    waiting = false;
+    callbacks = [];
+  } // 批处理，第一次开启定时器，后序只更新列表，之后执行清空逻辑
+  // 第一次cb 渲染watcher更新操作会调用nextTick 渲染watcher执行的过程肯定是同步的
+  // 第二次cb 用户传人nextTick的回调，
+
+
+  function nextTick(cb) {
+    callbacks.push(cb); // 默认的cb是渲染逻辑，用户的逻辑放到渲染逻辑之后就行。
+
+    if (!waiting) {
+      waiting = true; // vue2做降级，vue3直接用promise.then了
+      // 1、promise是否支持
+      // 2、mutationObserver
+      // 3、setImmediate
+      // 4、setTimeout
+
+      Promise.resolve().then(flushCallbacks);
+    }
+  }
+  var isObject = function isObject(val) {
+    return _typeof(val) === 'object' && val !== null;
+  }; // 策略
+
+  var LIFECYCLE_HOOKS = ['beforeCreate', 'created'];
+  var strategies = {}; // 策略集合
+  // 钩子合并策略
+
+  LIFECYCLE_HOOKS.forEach(function (hook) {
+    strategies[hook] = function mergeHooks(parentValue, childValue) {
+      if (!childValue) {
+        // 儿子没有，用父亲
+        return parentValue;
+      } else {
+        if (parentValue) {
+          // 都有
+          return parentValue.concat(childValue);
+        } else {
+          // 只有儿子
+          return [childValue];
+        }
+      }
+    };
+  }); // 其他策略
+  // strategies.data = function () {
+  // }
+  // 组件的合并策略
+
+  strategies.components = function (parentValue, childValue) {
+    // 查找链
+    var res = Object.create(parentValue);
+
+    if (childValue) {
+      for (var key in childValue) {
+        res[key] = childValue[key];
+      }
+    }
+
+    return res;
+  };
+
+  function mergeOptions(parent, child) {
+    var options = {}; // 不同的生命周期的合并策略（策略模式）
+    // 普通属性的合并策略
+    // 1 如何父亲有儿子没，应该儿子替换父亲
+    // 2 如果父亲有值，用父亲的
+
+    for (var key in parent) {
+      mergeField(key);
+    }
+
+    for (var _key in child) {
+      if (!parent.hasOwnProperty(_key)) {
+        mergeField(_key);
+      }
+    }
+
+    function mergeField(key) {
+      if (strategies[key]) {
+        return options[key] = strategies[key](parent[key], child[key]);
+      }
+
+      if (isObject(parent[key]) && isObject(child[key])) {
+        options[key] = _objectSpread2(_objectSpread2({}, parent[key]), child[key]);
+      } else {
+        if (child[key]) {
+          options[key] = child[key];
+        } else {
+          options[key] = parent[key];
+        }
+      }
+    }
+
+    return options;
+  }
+
+  function makeUp(str) {
+    var map = {};
+    str.split(',').forEach(function (tagName) {
+      map[tagName] = true;
+    });
+    return function (tag) {
+      return map[tag] || false;
+    };
+  }
+
+  var isReservedTag = makeUp('a,p,div,ul,li,span,input,button');
+  function isSameVnode(oldVnode, newVnode) {
+    return oldVnode.tag === newVnode.tag && oldVnode.key === newVnode.key;
   }
 
   function initState(vm) {
@@ -432,12 +562,19 @@
 
     if (opts.props) ;
 
-    if (opts.methods) ;
+    if (opts.methods) {
+      initMethods(vm, opts.methods);
+    }
 
     if (opts.data) {
-      // 数据初始化
       initData(vm);
     }
+
+    if (opts.watch) {
+      initWatch(vm, opts.watch);
+    }
+
+    if (opts.computed) ;
   }
 
   function proxy(vm, source, key) {
@@ -465,6 +602,52 @@
 
 
     observer(data);
+  }
+
+  function initMethods(vm, methods) {
+    for (var key in methods) {
+      proxy(vm, methods[key], key);
+    }
+  }
+
+  function initWatch(vm, watch) {
+    // watch是个对象
+    // watch原理是Watcher
+    for (var key in watch) {
+      var handlers = watch[key]; // handlers可能是数组 对象 方法
+
+      if (Array.isArray(handlers)) {
+        //
+        var _iterator = _createForOfIteratorHelper(handlers),
+            _step;
+
+        try {
+          for (_iterator.s(); !(_step = _iterator.n()).done;) {
+            var handler = _step.value;
+            createWatcher(vm, key, handler);
+          }
+        } catch (err) {
+          _iterator.e(err);
+        } finally {
+          _iterator.f();
+        }
+      } else {
+        // 单独的key value
+        createWatcher(vm, key, handlers);
+      }
+    }
+  }
+
+  function createWatcher(vm, key, handler, options) {
+    if (isObject(handler)) {
+      options = handler;
+      handler = handler.handler;
+    } else if (typeof handler === 'string') {
+      handler = vm[handler];
+    } // 参数的格式化 扁平化
+
+
+    console.log(key, handler, options);
   }
 
   // 标签名 aa-aa
@@ -772,135 +955,6 @@
     return render; // with和eval的区别，eval不干净，会获取到外面的值
   }
 
-  var callbacks = [];
-  var waiting = false;
-
-  function flushCallbacks() {
-    var _iterator = _createForOfIteratorHelper(callbacks),
-        _step;
-
-    try {
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
-        var cb = _step.value;
-        cb();
-      }
-    } catch (err) {
-      _iterator.e(err);
-    } finally {
-      _iterator.f();
-    }
-
-    waiting = false;
-    callbacks = [];
-  } // 批处理，第一次开启定时器，后序只更新列表，之后执行清空逻辑
-  // 第一次cb 渲染watcher更新操作会调用nextTick 渲染watcher执行的过程肯定是同步的
-  // 第二次cb 用户传人nextTick的回调，
-
-
-  function nextTick(cb) {
-    callbacks.push(cb); // 默认的cb是渲染逻辑，用户的逻辑放到渲染逻辑之后就行。
-
-    if (!waiting) {
-      waiting = true; // vue2做降级，vue3直接用promise.then了
-      // 1、promise是否支持
-      // 2、mutationObserver
-      // 3、setImmediate
-      // 4、setTimeout
-
-      Promise.resolve().then(flushCallbacks);
-    }
-  }
-  var isObject = function isObject(val) {
-    return _typeof(val) === 'object' && val !== null;
-  }; // 策略
-
-  var LIFECYCLE_HOOKS = ['beforeCreate', 'created'];
-  var strategies = {}; // 策略集合
-  // 钩子合并策略
-
-  LIFECYCLE_HOOKS.forEach(function (hook) {
-    strategies[hook] = function mergeHooks(parentValue, childValue) {
-      if (!childValue) {
-        // 儿子没有，用父亲
-        return parentValue;
-      } else {
-        if (parentValue) {
-          // 都有
-          return parentValue.concat(childValue);
-        } else {
-          // 只有儿子
-          return [childValue];
-        }
-      }
-    };
-  }); // 其他策略
-  // strategies.data = function () {
-  // }
-  // 组件的合并策略
-
-  strategies.components = function (parentValue, childValue) {
-    // 查找链
-    var res = Object.create(parentValue);
-
-    if (childValue) {
-      for (var key in childValue) {
-        res[key] = childValue[key];
-      }
-    }
-
-    return res;
-  };
-
-  function mergeOptions(parent, child) {
-    var options = {}; // 不同的生命周期的合并策略（策略模式）
-    // 普通属性的合并策略
-    // 1 如何父亲有儿子没，应该儿子替换父亲
-    // 2 如果父亲有值，用父亲的
-
-    for (var key in parent) {
-      mergeField(key);
-    }
-
-    for (var _key in child) {
-      if (!parent.hasOwnProperty(_key)) {
-        mergeField(_key);
-      }
-    }
-
-    function mergeField(key) {
-      if (strategies[key]) {
-        return options[key] = strategies[key](parent[key], child[key]);
-      }
-
-      if (isObject(parent[key]) && isObject(child[key])) {
-        options[key] = _objectSpread2(_objectSpread2({}, parent[key]), child[key]);
-      } else {
-        if (child[key]) {
-          options[key] = child[key];
-        } else {
-          options[key] = parent[key];
-        }
-      }
-    }
-
-    return options;
-  }
-
-  function makeUp(str) {
-    var map = {};
-    str.split(',').forEach(function (tagName) {
-      map[tagName] = true;
-    });
-    return function (tag) {
-      return map[tag] || false;
-    };
-  }
-
-  var isReservedTag = makeUp('a,p,div,ul,li,span,input,button');
-  function isSameVnode(oldVnode, newVnode) {
-    return oldVnode.tag === newVnode.tag && oldVnode.key === newVnode.key;
-  }
-
   var has = {};
   var queue = [];
   var pending = false;
@@ -970,10 +1024,11 @@
       value: function get() {
         pushTarget(this); // 1、将当前watcher放到Dep上， Dep.target = watcher
 
-        this.getter(); // 2、对属性进行取值 vm._update(vm._render())
+        this.getter(); // 2、对属性进行取值 vm._update(vm._render()) // 生成真实dom了，过程中会对模版中对属性进行get操作，触发Observer get同时添加到dep
 
         popTarget(); // 3、清空Dep.target = null，不在模版中访问对值不记录watcher
-      }
+      } //
+
     }, {
       key: "addDep",
       value: function addDep(dep) {
@@ -997,7 +1052,6 @@
     }, {
       key: "run",
       value: function run() {
-        console.log('-------');
         this.get();
       } // 当属性取值时要记住这个watcher，稍后数据变化了，去执行自己记住的watcher即可。依赖收集
 
@@ -1493,97 +1547,6 @@
   new Vue({
     name: 'zf'
   });
-
-  // 我们自己构建两个虚拟dom，之后手动比对
-
-  (function (done) {
-    if (!done) return; // 1、不进行diff操作的 之前的操作，先删除原来的，在创建新的
-
-    var vm1 = new Vue({
-      data: function data() {
-        return {
-          name: 'wby1',
-          age: 16
-        };
-      }
-    });
-    var render1 = compileToFunction("<div><div>{{name}}</div><div>{{age}}</div></div>");
-    var oldVnode = render1.call(vm1);
-    var el1 = createElm(oldVnode); //
-
-    document.body.appendChild(el1);
-    var vm2 = new Vue({
-      data: function data() {
-        return {
-          name: 'wby22',
-          age: 16
-        };
-      }
-    });
-    var render2 = compileToFunction("<div><div>{{name}}</div><div>{{age}}</div></div>");
-    var newVnode = render2.call(vm2);
-    var el2 = createElm(newVnode); //
-
-    document.body.removeChild(el1);
-    document.body.appendChild(el2);
-  })();
-
-  (function (done) {
-    if (!done) return;
-    var vm1 = new Vue({
-      data: function data() {
-        return {
-          name: 'wby1',
-          age: 16
-        };
-      }
-    });
-    var oldVnode = compileToFunction("<div a=\"1\" style=\"background:red;color:white\">{{name}}</div>").call(vm1);
-    var el1 = createElm(oldVnode);
-    document.body.appendChild(el1);
-    var vm2 = new Vue({
-      data: function data() {
-        return {
-          name: 'wby22',
-          age: 16
-        };
-      }
-    }); // 1、 标签不一样，div -> p
-
-    var render2 = compileToFunction("<p>{{name}}</p>");
-    render2.call(vm2); // patch(oldVnode, newVnode2)
-    // 2、标签一样，更新属性
-
-    var render3 = compileToFunction("<div b=\"2\" style=\"color:green\">{{name}}</div>");
-    var newVnode3 = render3.call(vm2);
-    setTimeout(function () {
-      patch(oldVnode, newVnode3);
-    }, 1000);
-  })();
-
-  (function (done) {
-    if (!done) return;
-    var vm1 = new Vue({
-      data: function data() {
-        return {};
-      }
-    });
-    var oldVnode = compileToFunction("\n        <ul>\n            <li key=\"A\" style=\"background:red\">A</li>\n            <li key=\"B\" style=\"background:yellow\">B</li>\n            <li key=\"C\" style=\"background:blue\">C</li>\n            <li key=\"D\" style=\"background:green\">D</li>\n            <li key=\"F\" style=\"background:pink\">F</li>\n        </ul>").call(vm1);
-    var el1 = createElm(oldVnode);
-    document.body.appendChild(el1);
-    var vm2 = new Vue({
-      data: function data() {
-        return {};
-      }
-    }); // 2、标签一样，都有儿子，diff
-
-    var render3 = compileToFunction("\n        <ul>\n             <li key=\"N\" style=\"background:pink\">N</li>\n             <li key=\"A\" style=\"background:red\">A</li>\n             <li key=\"C\" style=\"background:blue\">C</li>\n             <li key=\"B\" style=\"background:yellow\">B</li>\n            <li key=\"E\" style=\"background:purple\">E</li>\n        </ul>");
-    var newVnode3 = render3.call(vm2);
-    setTimeout(function () {
-      console.log('------------');
-      patch(oldVnode, newVnode3);
-    }, 1000);
-  })(11);
 
   return Vue;
 
