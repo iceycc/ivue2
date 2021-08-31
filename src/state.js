@@ -1,5 +1,6 @@
 import observer from "./observer/index";
 import {isFunction, isObject} from "./utils";
+import {Watcher} from "./observer/watcher";
 
 export function initState(vm) {
     // 将所有的数据定义在vm属性上，并且后序修改，需要触发视图更新
@@ -84,6 +85,17 @@ function createWatcher(vm, key, handler, options) {
         handler = vm[handler]
     }
     // 参数的格式化 扁平化
+    // console.log(key, handler, options)
+    // 基于$watch , 原型的方法
+    return vm.$watch(key, handler, options)
+}
 
-    console.log(key, handler, options)
+export function stateMixin(Vue) {
+    Vue.prototype.$watch = function (exprOrFn, handler, options = {}) {
+        const vm = this
+        // 用户的watcher
+        // console.log(exprOrFn)
+        options.user = true; // 用户自己写的wathcer
+        new Watcher(vm, exprOrFn, handler, options)
+    }
 }
