@@ -701,6 +701,17 @@
         }
       }
     }, {
+      key: "depend",
+      value: function depend() {
+        // computed时需要将栈中其他的watcher也进行收集
+        var i = this.deps.length;
+        debugger;
+
+        while (i--) {
+          this.deps[i].depend();
+        }
+      }
+    }, {
       key: "run",
       value: function run() {
         // this.get();
@@ -818,6 +829,11 @@
       if (watcher !== null && watcher !== void 0 && watcher.dirty) {
         // 默认第一次取值,如果dirty为true，就调用用户到方法
         watcher.evaluate(); // 执行取值
+      }
+
+      if (Dep.target) {
+        // 这里的watcher是计算属性watcher
+        watcher.depend(); // 渲染watcher也一起收集
       }
 
       return watcher.value;

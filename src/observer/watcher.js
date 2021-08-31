@@ -69,6 +69,14 @@ export class Watcher {
         }
     }
 
+    depend() { // computed时需要将栈中其他的watcher也进行收集
+        let i = this.deps.length;
+        debugger
+        while (i--) {
+            this.deps[i].depend()
+        }
+    }
+
     run() {
         // this.get();
         let oldValue = this.value;

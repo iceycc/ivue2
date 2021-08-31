@@ -87,6 +87,8 @@ snabbdom.js
 ## computed
 - 缓存
 - 不会立刻执行
+- 依赖收集
+- computed除了收集计算属性watcher还要搜集渲染watcher
 
 
 

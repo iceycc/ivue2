@@ -22,7 +22,7 @@
 <div id="app" a="1" b="2" style="background-color:red">
     <ul style="color:green;font-size: 30px">
         <li>
-            name: {{ name }}
+            age1: {{ age1 }}; age {{ age }}
         </li>
     </ul>
 </div>
@@ -33,7 +33,7 @@
         el: '#app',
         data() {
             return {
-                name: 'wby',
+                // name: 'wby',
                 age1: 10,
                 age2: 11
             }
@@ -51,10 +51,11 @@
             // computed依赖对值不变，就不会重新执行
             // computed变量可以用于模版的渲染
 
-            // 原理也是通过watcher实现的
+            // 原理也是通过watcher实现的 计算属性wathcer
             age() {
                 // 不取值不会触发的
                 console.log('computed age')
+                // 默认在执行时会让age1和age2的dep属性记录当前计算属性的watcher
                 return this.age1 + this.age2
             },
             // age3:{
@@ -67,14 +68,17 @@
             // }
         },
     })
-    // setTimeout(() => {
-    //     vm.age1 = 20
-    //     vm.age2 = 20
-    // }, 1000)
-    setTimeout(()=>{
+
+    // 如果age1变化，会调用计算属性的watcher去执行--》dirty变为true
+    setTimeout(() => {
+        // age1或age2，应该记录来除了计算属性之外应当还要记录当前的渲染watcher，属性变化后重新取值还要重新渲染
+        vm.age1 = 20
+        vm.age2 = 20
+    }, 1000)
+    setTimeout(() => {
         console.log(vm.age);
         console.log(vm.age)
-    },1000)
+    }, 2000)
 </script>
 </body>
 </html>

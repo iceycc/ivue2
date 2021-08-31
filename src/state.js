@@ -1,6 +1,7 @@
 import observer from "./observer/index";
 import {isFunction, isObject} from "./utils";
 import {Watcher} from "./observer/watcher";
+import Dep from "./observer/dep";
 
 export function initState(vm) {
     // 将所有的数据定义在vm属性上，并且后序修改，需要触发视图更新
@@ -89,11 +90,15 @@ function defineComputed(target, key, userDef) {
 
 function createComputedGetter(key) {
     // 增加缓存
-    return function(){ // 添加来缓存 通过watcher来添加到
+    return function () { // 添加来缓存 通过watcher来添加到
         // console.log(this) // vm实例
         let watcher = this._computedWatchers[key]
         if (watcher?.dirty) { // 默认第一次取值,如果dirty为true，就调用用户到方法
             watcher.evaluate(); // 执行取值
+        }
+        if (Dep.target) {
+            // 这里的watcher是计算属性watcher
+            watcher.depend()// 渲染watcher也一起收集
         }
         return watcher.value;
     }
